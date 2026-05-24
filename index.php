@@ -271,39 +271,36 @@ if (isset($_SESSION['login'])) {
 
         <button type="submit">🎵 Записаться</button>
     </form>
+
+    <a href="edit_booking.php?id=<?php echo $booking['id']; ?>" class="btn-small">✏️</a>
     
-    <?php if (!empty($userBookings)): ?>
-        <div class="my-bookings">
-            <h3>📅 Мои записи</h3>
-            <?php foreach ($userBookings as $booking): ?>
-                <div class="booking-item">
-                    <div class="booking-info">
-                        <strong><?php echo htmlspecialchars($booking['booking_date']); ?></strong> 
-                        <?php echo htmlspecialchars($booking['booking_time']); ?><br>
-                        Студия: <?php echo htmlspecialchars($booking['studio_name']); ?>
-                        <?php if ($booking['special_requests']): ?>
-                            <br><small>📝 <?php echo htmlspecialchars($booking['special_requests']); ?></small>
-                        <?php endif; ?>
-                    </div>
-                    <div>
-                        <span class="booking-status status-<?php echo $booking['status']; ?>">
-                            <?php 
-                                $statusText = [
-                                    'pending' => '⏳ Ожидание',
-                                    'confirmed' => '✅ Подтверждена',
-                                    'cancelled' => '❌ Отменена'
-                                ];
-                                echo $statusText[$booking['status']] ?? $booking['status'];
-                            ?>
-                        </span>
-                        <?php if ($booking['status'] != 'cancelled'): ?>
-                            <a href="edit_booking.php?id=<?php echo $booking['id']; ?>" class="btn-small">✏️</a>
-                        <?php endif; ?>
-                    </div>
+<?php if (!empty($userBookings)): ?>
+    <div class="my-bookings">
+        <h3>📅 Мои записи</h3>
+        <?php foreach ($userBookings as $booking): ?>
+            <div class="booking-item">
+                <div class="booking-info">
+                    <strong><?php echo htmlspecialchars($booking['booking_date']); ?></strong> 
+                    <?php echo htmlspecialchars($booking['booking_time']); ?><br>
+                    Студия: <?php echo htmlspecialchars($booking['studio_name']); ?>
                 </div>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
+                <div>
+                    <span class="booking-status status-<?php echo $booking['status']; ?>">
+                        <?php 
+                            $statusText = [
+                                'pending' => '⏳ Ожидание',
+                                'confirmed' => '✅ Подтверждена',
+                                'cancelled' => '❌ Отменена'
+                            ];
+                            echo $statusText[$booking['status']] ?? $booking['status'];
+                        ?>
+                    </span>
+                    <a href="edit_booking.php?id=<?php echo $booking['id']; ?>" class="btn-small">✏️ Редактировать</a>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+<?php endif; ?>
 </div>
 </body>
 </html>
