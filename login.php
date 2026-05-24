@@ -5,13 +5,7 @@ session_start();
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
-try {
-    $db = new PDO("mysql:host=localhost;dbname=u82361;charset=utf8", 'u82361', '9967838');
-    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    error_log($e->getMessage());
-    die('Ошибка сервера. Попробуйте позже.');
-}
+require_once 'includes/functions.php';
 
 // Если уже авторизован - перенаправляем
 if (!empty($_SESSION['login'])) {
@@ -47,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
                 <button type="submit">🚪 Войти</button>
             </form>
             <p style="margin-top: 20px; text-align: center;">
-                <a href="index.php">← Вернуться к записи</a>
+                <a href="index.php">← Вернуться к форме записи</a>
             </p>
         </div>
     </body>
@@ -60,18 +54,13 @@ else {
     $pass = $_POST['pass'];
     $pass_hash = md5($pass);
     
-    $stmt = $db->prepare("SELECT id, login FROM application WHERE login = ? AND password_hash = ?");
-    $stmt->execute([$login, $pass_hash]);
-    $user = $stmt->fetch();
+    $user = getUserByLoginAndPass($login, $pass_hash);
     
     if ($user) {
         $_SESSION['login'] = $user['login'];
-        $_SESSION['uid'] = $user['id'];
-        session_regenerate_id(true);
         header('Location: index.php');
         exit();
     } else {
-        usleep(rand(500000, 1500000));
         header('Location: login.php?error=1');
         exit();
     }

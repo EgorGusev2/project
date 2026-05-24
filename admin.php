@@ -13,52 +13,46 @@ if (!checkAdminAuth()) {
     exit();
 }
 
-// Обработка удаления пользователя
+// Обработка удаления
 if (isset($_POST['delete']) && isset($_POST['id'])) {
-    $stmt = $db->prepare("DELETE FROM application WHERE id = ?");
+    $stmt = $db->prepare("DELETE FROM rehearsal_booking WHERE id = ?");
     $stmt->execute([$_POST['id']]);
-    $message = '<div class="success">✅ Пользователь удалён</div>';
+    $message = '<div class="success">✅ Запись удалена</div>';
 }
 
-// Получение всех пользователей
-$stmt = $db->prepare("
-    SELECT a.*, COUNT(b.id) as bookings_count 
-    FROM application a
-    LEFT JOIN rehearsal_booking b ON a.id = b.user_id
-    GROUP BY a.id ORDER BY a.id DESC
-");
-$stmt->execute();
-$users = $stmt->fetchAll();
+// Обработка изменения статуса
+if (isset($_POST['change_status']) && isset($_POST['id']) && isset($_POST['status'])) {
+    $stmt = $db->prepare("UPDATE rehearsal_booking SET status = ? WHERE id = ?");
+    $stmt->execute([$_POST['status'], $_POST['id']]);
+    $message = '<div class="success">✅ Статус обновлен</div>';
+}
 
-$stmt = $db->prepare("SELECT COUNT(*) FROM application");
-$stmt->execute();
-$totalUsers = $stmt->fetchColumn();
-
-$stmt = $db->prepare("SELECT COUNT(*) FROM rehearsal_booking WHERE status = 'pending'");
-$stmt->execute();
-$pendingBookings = $stmt->fetchColumn();
-
+// Получение всех бронирований
+$bookings = getAllBookings();
 $studioStats = getStudioStats();
-?>
 
+?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Админ-панель - Репетиции</title>
+    <title>Панель администратора - Репетиции</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .stats-panel { background: linear-gradient(135deg, #667eea, #764ba2); padding: 20px; border-radius: 16px; margin-bottom: 20px; color: white; }
+        .stats-panel { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
         .stats-grid { display: flex; gap: 20px; flex-wrap: wrap; }
-        .stat-box { background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); padding: 15px; border-radius: 12px; flex: 1; min-width: 150px; text-align: center; }
-        .stat-number { font-size: 32px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #4a5568; color: white; }
-        tr:hover { background: #f7fafc; }
-        .btn-edit { background: #4299e1; color: white; padding: 5px 10px; text-decoration: none; border-radius: 6px; font-size: 12px; }
-        .btn-delete { background: #f56565; color: white; padding: 5px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; }
-        .btn-bookings { background: #48bb78; color: white; padding: 5px 10px; text-decoration: none; border-radius: 6px; font-size: 12px; }
+        .stat-box { background: white; padding: 15px; border-radius: 8px; flex: 1; min-width: 200px; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+        th { background: #4CAF50; color: white; }
+        tr:hover { background: #f5f5f5; }
+        .btn-edit { background: #ffc107; color: #333; padding: 5px 10px; text-decoration: none; border-radius: 4px; font-size: 12px; }
+        .btn-delete { background: #f44336; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .status-select { padding: 4px; border-radius: 4px; font-size: 12px; }
+        .status-pending { background: #fff3e0; color: #e65100; }
+        .status-confirmed { background: #e8f5e9; color: #2e7d32; }
+        .status-cancelled { background: #ffebee; color: #c62828; }
+        .lang-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #ddd; }
     </style>
 </head>
 <body>
@@ -71,48 +65,63 @@ $studioStats = getStudioStats();
         <h2>📊 Статистика</h2>
         <div class="stats-grid">
             <div class="stat-box">
-                <div class="stat-number"><?= h($totalUsers) ?></div>
-                <div>👥 Всего пользователей</div>
+                <strong>Всего записей:</strong> <?php echo count($bookings); ?>
             </div>
             <div class="stat-box">
-                <div class="stat-number"><?= h($pendingBookings) ?></div>
-                <div>⏳ Ожидают подтверждения</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-number"><?= count($studioStats) ?></div>
-                <div>🎸 Студий</div>
+                <strong>Популярность студий:</strong>
+                <div>
+                    <?php foreach ($studioStats as $stat): ?>
+                        <div class="lang-item">
+                            <span><?php echo h($stat['studio_name']); ?></span>
+                            <span><?php echo h($stat['booking_count']); ?> зап.</span>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             </div>
         </div>
     </div>
     
-    <div class="stats-panel" style="background: #2d3748;">
-        <h3>🎵 Популярность студий</h3>
-        <?php foreach ($studioStats as $stat): ?>
-            <div style="display: flex; justify-content: space-between; padding: 5px 0;">
-                <span><?= h($stat['name']) ?></span>
-                <span><?= h($stat['bookings']) ?> бронирований</span>
-            </div>
-        <?php endforeach; ?>
-    </div>
-    
-    <h2>📋 Список пользователей</h2>
+    <h2>📋 Список бронирований</h2>
     <table>
         <thead>
-            <tr><th>ID</th><th>ФИО</th><th>Телефон</th><th>Логин</th><th>Записей</th><th>Действия</th></tr>
+            <tr>
+                <th>ID</th>
+                <th>Клиент</th>
+                <th>Телефон</th>
+                <th>Логин</th>
+                <th>Дата</th>
+                <th>Время</th>
+                <th>Студия</th>
+                <th>Статус</th>
+                <th>Пожелания</th>
+                <th>Действия</th>
+            </tr>
         </thead>
         <tbody>
-            <?php foreach ($users as $user): ?>
+            <?php foreach ($bookings as $booking): ?>
             <tr>
-                <td><?= h($user['id']) ?></td>
-                <td><?= h($user['full_name']) ?></td>
-                <td><?= h($user['phone']) ?></td>
-                <td><?= h($user['login']) ?></td>
-                <td><?= h($user['bookings_count']) ?></td>
+                <td><?php echo h($booking['id']); ?></td>
+                <td><?php echo h($booking['full_name']); ?></td>
+                <td><?php echo h($booking['phone']); ?></td>
+                <td><?php echo h($booking['login']); ?></td>
+                <td><?php echo h($booking['booking_date']); ?></td>
+                <td><?php echo h($booking['booking_time']); ?></td>
+                <td><?php echo h($booking['studio_name']); ?></td>
                 <td>
-                    <a href="admin_edit.php?id=<?= h($user['id']) ?>" class="btn-edit">✏️ Ред.</a>
-                    <a href="admin_user_bookings.php?id=<?= h($user['id']) ?>" class="btn-bookings">📋 Записи</a>
-                    <form method="POST" style="display: inline;" onsubmit="return confirm('Удалить пользователя?')">
-                        <input type="hidden" name="id" value="<?= h($user['id']) ?>">
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="id" value="<?php echo h($booking['id']); ?>">
+                        <select name="status" class="status-select" onchange="this.form.submit()">
+                            <option value="pending" <?php echo $booking['status'] == 'pending' ? 'selected' : ''; ?> class="status-pending">⏳ Ожидание</option>
+                            <option value="confirmed" <?php echo $booking['status'] == 'confirmed' ? 'selected' : ''; ?> class="status-confirmed">✅ Подтверждена</option>
+                            <option value="cancelled" <?php echo $booking['status'] == 'cancelled' ? 'selected' : ''; ?> class="status-cancelled">❌ Отменена</option>
+                        </select>
+                        <input type="hidden" name="change_status" value="1">
+                    </form>
+                </td>
+                <td style="max-width: 200px; overflow: hidden; text-overflow: ellipsis;"><?php echo h($booking['special_requests']); ?></td>
+                <td>
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('Удалить запись?')">
+                        <input type="hidden" name="id" value="<?php echo h($booking['id']); ?>">
                         <button type="submit" name="delete" class="btn-delete">🗑️ Удалить</button>
                     </form>
                 </td>
@@ -121,10 +130,7 @@ $studioStats = getStudioStats();
         </tbody>
     </table>
     
-    <div style="margin-top: 20px; display: flex; gap: 10px;">
-        <a href="admin_bookings.php" class="admin-btn" style="background: #48bb78;">🎸 Управление записями</a>
-        <a href="index.php" style="color: #667eea;">← На главную</a>
-    </div>
+    <p style="margin-top: 20px;"><a href="index.php">← На главную</a></p>
 </div>
 </body>
 </html>
