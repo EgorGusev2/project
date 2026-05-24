@@ -28,9 +28,14 @@
             <span>👤 Вы вошли как <strong><?= htmlspecialchars($_SESSION['login']) ?></strong></span>
             <a href="logout.php" class="logout-link">🚪 Выйти</a>
         </div>
+        <div class="edit-info">
+            💡 <strong>У вас уже есть запись?</strong> Просто измените данные в форме ниже — запись обновится автоматически.
+        </div>
     <?php else: ?>
         <div class="user-info">
             <a href="login.php" class="login-link">🔐 Уже есть аккаунт? Войти</a>
+            <span style="margin-left: 15px; color: #666;">|</span>
+            <span style="color: #666;">📝 Нет аккаунта? Заполните форму — он создастся автоматически</span>
         </div>
     <?php endif; ?>
     
@@ -52,50 +57,6 @@
                    class="<?= !empty($errors['phone']) ? 'error' : '' ?>"
                    placeholder="+7 (123) 456-78-90" required>
         </div>
-
-        <!-- Email -->
-        <div class="form-group">
-            <label for="email">📧 Email:</label>
-            <input type="email" id="email" name="email" 
-                   value="<?= htmlspecialchars($values['email']) ?>"
-                   class="<?= !empty($errors['email']) ? 'error' : '' ?>"
-                   placeholder="example@mail.ru" required>
-        </div>
-
-        <!-- Дата рождения -->
-        <div class="form-group">
-            <label for="birth_date">🎂 Дата рождения:</label>
-            <input type="date" id="birth_date" name="birth_date" 
-                   value="<?= htmlspecialchars($values['birth_date']) ?>"
-                   class="<?= !empty($errors['birth_date']) ? 'error' : '' ?>">
-            <small>Должно быть 18 лет и старше</small>
-        </div>
-
-        <!-- Пол -->
-        <div class="form-group">
-            <label>Пол:</label>
-            <div class="radio-group">
-                <input type="radio" id="male" name="gender" value="male" 
-                       <?= ($values['gender'] == 'male') ? 'checked' : '' ?>>
-                <label for="male">👨 Мужской</label>
-            </div>
-            <div class="radio-group">
-                <input type="radio" id="female" name="gender" value="female" 
-                       <?= ($values['gender'] == 'female') ? 'checked' : '' ?>>
-                <label for="female">👩 Женский</label>
-            </div>
-        </div>
-
-        <!-- Биография -->
-        <div class="form-group">
-            <label for="biography">📖 Биография (музыкальный опыт):</label>
-            <textarea id="biography" name="biography" rows="4" 
-                      placeholder="Расскажите о своём музыкальном опыте, инструментах и т.д."><?= htmlspecialchars($values['biography']) ?></textarea>
-        </div>
-
-        <hr style="margin: 20px 0; border-color: #e2e8f0;">
-
-        <h3>🎵 Детали репетиции</h3>
 
         <!-- Дата репетиции -->
         <div class="form-group">
@@ -134,7 +95,7 @@
         <!-- Пожелания к репетиции -->
         <div class="form-group">
             <label for="special_requests">💭 Пожелания к репетиции:</label>
-            <textarea id="special_requests" name="special_requests" rows="4" 
+            <textarea id="special_requests" name="special_requests" rows="3" 
                       placeholder="Напишите особые пожелания: нужное оборудование, особые условия и т.д."><?= htmlspecialchars($values['special_requests']) ?></textarea>
             <small>Необязательное поле, до 500 символов</small>
         </div>
@@ -149,13 +110,15 @@
             </div>
         </div>
 
-        <button type="submit">🎸 Записаться на репетицию</button>
+        <button type="submit">
+            <?= !empty($_SESSION['login']) ? '✏️ Обновить запись' : '🎸 Записаться на репетицию' ?>
+        </button>
     </form>
     
-    <!-- Ссылка на просмотр своих записей -->
+    <!-- Ссылка на просмотр своих записей (только для авторизованных) -->
     <?php if (!empty($_SESSION['login'])): ?>
     <div style="margin-top: 20px; text-align: center;">
-        <a href="my_bookings.php" style="color: #667eea;">📋 Посмотреть мои записи</a>
+        <a href="my_bookings.php" class="my-bookings-link">📋 Посмотреть мои записи</a>
     </div>
     <?php endif; ?>
 </div>
