@@ -21,11 +21,11 @@ try {
 
 // Доступные студии
 $availableStudios = [
-    '🎸 Rock Studio' => '🎸 Rock Studio',
-    '🎷 Jazz Hall' => '🎷 Jazz Hall',
-    '🎹 Electronic Lab' => '🎹 Electronic Lab',
-    '🎻 Acoustic Room' => '🎻 Acoustic Room',
-    '🎧 Recording Suite' => '🎧 Recording Suite'
+    '🎸 Rock Studio' => 'Rock Studio',
+    '🎷 Jazz Hall' => 'Jazz Hall',
+    '🎹 Electronic Lab' => 'Electronic Lab',
+    '🎻 Acoustic Room' => 'Acoustic Room',
+    '🎧 Recording Suite' => 'Recording Suite'
 ];
 
 // Функция для генерации уникального логина
@@ -75,9 +75,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         'phone' => '',
         'booking_date' => '',
         'booking_time' => '',
-        'studio_name' => array_key_first($availableStudios),
+        'studio_name' => 'Rock Studio',
         'special_requests' => '',
-        'contract' => false
+        'agreed' => false
     );
 
     // Проверяем cookie успешного сохранения
@@ -85,12 +85,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         setcookie('save', '', 100000);
         $messages[] = '<div class="success">✅ Заявка на репетицию успешно отправлена!</div>';
         
+        // ПОКАЗЫВАЕМ ЛОГИН И ПАРОЛЬ
         if (!empty($_COOKIE['new_login']) && !empty($_COOKIE['new_pass'])) {
-            $messages[] = sprintf(
-                '<div class="success">🔐 Вам создан аккаунт!<br>
-                 Логин: <strong>%s</strong><br>
-                 Пароль: <strong>%s</strong><br>
-                 <a href="login.php">Войти</a> для управления записями.</div>',
+            $messages[] = sprintf('
+                <div class="credentials-box">
+                    <h3>🔐 Ваши учетные данные для входа</h3>
+                    <p><strong>Логин:</strong> <span class="cred-value">%s</span></p>
+                    <p><strong>Пароль:</strong> <span class="cred-value">%s</span></p>
+                    <p class="cred-note">✏️ Сохраните эти данные! Они понадобятся для редактирования записи.</p>
+                    <a href="login.php" class="cred-login-btn">Перейти ко входу →</a>
+                </div>',
                 htmlspecialchars($_COOKIE['new_login']),
                 htmlspecialchars($_COOKIE['new_pass'])
             );
@@ -105,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
             htmlspecialchars($_SESSION['login']));
         
         try {
-            // Загружаем данные пользователя
+            // Загружаем данные пользователя из application
             $stmt = $db->prepare("SELECT full_name, phone, agreed FROM application WHERE id = ?");
             $stmt->execute([$_SESSION['uid']]);
             $userData = $stmt->fetch();
@@ -113,10 +117,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
             if ($userData) {
                 $values['full_name'] = htmlspecialchars($userData['full_name']);
                 $values['phone'] = htmlspecialchars($userData['phone']);
-                $values['contract'] = (bool)$userData['agreed'];
+                $values['agreed'] = (bool)$userData['agreed'];
             }
             
-            // Загружаем ЕСЛИ ЕСТЬ бронирование пользователя (для редактирования)
+            // Загружаем существующее бронирование пользователя
             $stmt = $db->prepare("
                 SELECT * FROM rehearsal_booking 
                 WHERE user_id = ? 
@@ -132,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
                 $values['booking_time'] = $lastBooking['booking_time'];
                 $values['studio_name'] = $lastBooking['studio_name'];
                 $values['special_requests'] = htmlspecialchars($lastBooking['special_requests'] ?? '');
-                $messages[] = '<div class="info">📝 У вас есть активная запись. Вы можете её изменить, отправив форму заново.</div>';
+                $messages[] = '<div class="info">📝 У вас есть активная запись. Измените форму ниже — запись обновится.</div>';
             }
             
         } catch (PDOException $e) {
@@ -141,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         }
     } else {
         // Загружаем сохранённые значения из cookies (при ошибках)
-        $errorFields = ['full_name', 'phone', 'booking_date', 'booking_time', 'studio_name', 'contract'];
+        $errorFields = ['full_name', 'phone', 'booking_date', 'booking_time', 'studio_name', 'agreed'];
         foreach ($errorFields as $field) {
             $errors[$field] = !empty($_COOKIE[$field . '_error']);
             if ($errors[$field]) {
@@ -154,16 +158,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET') {
         if ($errors['booking_date']) $messages[] = '<div class="error">❌ Ошибка в поле "Дата репетиции"</div>';
         if ($errors['booking_time']) $messages[] = '<div class="error">❌ Ошибка в поле "Время репетиции"</div>';
         if ($errors['studio_name']) $messages[] = '<div class="error">❌ Ошибка в поле "Студия"</div>';
-        if ($errors['contract']) $messages[] = '<div class="error">❌ Подтвердите ознакомление с правилами</div>';
+        if ($errors['agreed']) $messages[] = '<div class="error">❌ Подтвердите ознакомление с правилами</div>';
 
         // Восстанавливаем значения из cookies
         $values['full_name'] = $_COOKIE['full_name_value'] ?? '';
         $values['phone'] = $_COOKIE['phone_value'] ?? '';
         $values['booking_date'] = $_COOKIE['booking_date_value'] ?? '';
         $values['booking_time'] = $_COOKIE['booking_time_value'] ?? '';
-        $values['studio_name'] = $_COOKIE['studio_value'] ?? array_key_first($availableStudios);
+        $values['studio_name'] = $_COOKIE['studio_value'] ?? 'Rock Studio';
         $values['special_requests'] = $_COOKIE['requests_value'] ?? '';
-        $values['contract'] = !empty($_COOKIE['contract_value']);
+        $values['agreed'] = !empty($_COOKIE['agreed_value']);
     }
 
     include('form.php');
@@ -220,13 +224,22 @@ else {
     setcookie('booking_time_value', $_POST['booking_time'], time() + 365 * 86400);
 
     // 5. Студия
-    if (empty($_POST['studio_name']) || !array_key_exists($_POST['studio_name'], $availableStudios)) {
+    $studioName = $_POST['studio_name'] ?? '';
+    $validStudio = false;
+    foreach ($availableStudios as $key => $val) {
+        if ($studioName == $key || $studioName == $val) {
+            $studioName = $val;
+            $validStudio = true;
+            break;
+        }
+    }
+    if (!$validStudio) {
         setcookie('studio_error', '1', time() + 86400);
         $errors = true;
     }
-    setcookie('studio_value', $_POST['studio_name'], time() + 365 * 86400);
+    setcookie('studio_value', $studioName, time() + 365 * 86400);
 
-    // 6. Пожелания (необязательно, максимум 500 символов)
+    // 6. Пожелания
     $specialRequests = $_POST['special_requests'] ?? '';
     if (strlen($specialRequests) > 500) {
         setcookie('requests_error', '1', time() + 86400);
@@ -234,14 +247,14 @@ else {
     }
     setcookie('requests_value', $specialRequests, time() + 365 * 86400);
 
-    // 7. Правила
-    if (empty($_POST['contract'])) {
-        setcookie('contract_error', '1', time() + 86400);
+    // 7. Согласие
+    if (empty($_POST['agreed'])) {
+        setcookie('agreed_error', '1', time() + 86400);
         $errors = true;
     }
-    setcookie('contract_value', $_POST['contract'], time() + 365 * 86400);
+    setcookie('agreed_value', $_POST['agreed'] ?? '', time() + 365 * 86400);
 
-    // Проверка доступности времени (исключаем свою запись при редактировании)
+    // Проверка доступности времени
     if (!$errors && !empty($_POST['booking_date']) && !empty($_POST['booking_time'])) {
         $existingBookingId = null;
         if (!empty($_SESSION['uid'])) {
@@ -266,7 +279,7 @@ else {
     }
 
     // Очищаем cookies ошибок
-    $errorFields = ['full_name', 'phone', 'booking_date', 'booking_time', 'studio_name', 'contract'];
+    $errorFields = ['full_name', 'phone', 'booking_date', 'booking_time', 'studio_name', 'agreed'];
     foreach ($errorFields as $field) {
         setcookie($field . '_error', '', 100000);
     }
@@ -279,24 +292,22 @@ else {
             $stmt = $db->prepare("UPDATE application SET full_name = ?, phone = ?, agreed = ? WHERE id = ?");
             $stmt->execute([$_POST['full_name'], $_POST['phone'], 1, $_SESSION['uid']]);
             
-            // Проверяем, есть ли уже бронирование у пользователя
+            // Проверяем существующее бронирование
             $stmt = $db->prepare("SELECT id FROM rehearsal_booking WHERE user_id = ? AND status != 'cancelled'");
             $stmt->execute([$_SESSION['uid']]);
             $existing = $stmt->fetch();
             
             if ($existing) {
-                // ОБНОВЛЯЕМ существующее бронирование (редактирование)
+                // Обновляем существующее бронирование
                 $stmt = $db->prepare("UPDATE rehearsal_booking SET booking_date = ?, booking_time = ?, studio_name = ?, special_requests = ?, status = 'pending' WHERE id = ?");
-                $stmt->execute([$_POST['booking_date'], $_POST['booking_time'], $_POST['studio_name'], $specialRequests, $existing['id']]);
-                $messages[] = '<div class="success">✏️ Ваша запись успешно обновлена!</div>';
+                $stmt->execute([$_POST['booking_date'], $_POST['booking_time'], $studioName, $specialRequests, $existing['id']]);
             } else {
-                // СОЗДАЁМ новое бронирование
+                // Создаём новое бронирование
                 $stmt = $db->prepare("INSERT INTO rehearsal_booking (user_id, booking_date, booking_time, studio_name, special_requests, status) VALUES (?, ?, ?, ?, ?, 'pending')");
-                $stmt->execute([$_SESSION['uid'], $_POST['booking_date'], $_POST['booking_time'], $_POST['studio_name'], $specialRequests]);
-                $messages[] = '<div class="success">✅ Новая запись создана!</div>';
+                $stmt->execute([$_SESSION['uid'], $_POST['booking_date'], $_POST['booking_time'], $studioName, $specialRequests]);
             }
         } else {
-            // Создаём нового пользователя
+            // НОВЫЙ ПОЛЬЗОВАТЕЛЬ - генерируем логин и пароль
             $login = generateUniqueLogin($db);
             $password = generatePassword();
             $password_hash = md5($password);
@@ -307,8 +318,9 @@ else {
             
             // Создаём бронирование
             $stmt = $db->prepare("INSERT INTO rehearsal_booking (user_id, booking_date, booking_time, studio_name, special_requests, status) VALUES (?, ?, ?, ?, ?, 'pending')");
-            $stmt->execute([$userId, $_POST['booking_date'], $_POST['booking_time'], $_POST['studio_name'], $specialRequests]);
+            $stmt->execute([$userId, $_POST['booking_date'], $_POST['booking_time'], $studioName, $specialRequests]);
             
+            // СОХРАНЯЕМ ЛОГИН И ПАРОЛЬ В COOKIE ДЛЯ ПОКАЗА
             setcookie('new_login', $login, time() + 60);
             setcookie('new_pass', $password, time() + 60);
         }
@@ -318,7 +330,7 @@ else {
         setcookie('save', '1', time() + 86400);
         
         // Очищаем временные cookies
-        $valueFields = ['full_name_value', 'phone_value', 'booking_date_value', 'booking_time_value', 'studio_value', 'requests_value', 'contract_value'];
+        $valueFields = ['full_name_value', 'phone_value', 'booking_date_value', 'booking_time_value', 'studio_value', 'requests_value', 'agreed_value'];
         foreach ($valueFields as $field) {
             setcookie($field, '', 100000);
         }

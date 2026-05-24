@@ -35,7 +35,7 @@
         <div class="user-info">
             <a href="login.php" class="login-link">🔐 Уже есть аккаунт? Войти</a>
             <span style="margin-left: 15px; color: #666;">|</span>
-            <span style="color: #666;">📝 Нет аккаунта? Заполните форму — он создастся автоматически</span>
+            <span style="color: #666;">📝 Нет аккаунта? Заполните форму — логин и пароль придут после отправки</span>
         </div>
     <?php endif; ?>
     
@@ -83,7 +83,7 @@
             <label for="studio_name">🏢 Выберите студию:</label>
             <select id="studio_name" name="studio_name" 
                     class="<?= !empty($errors['studio_name']) ? 'error' : '' ?>" required>
-                <?php foreach ($availableStudios as $name => $value): ?>
+                <?php foreach ($availableStudios as $name): ?>
                     <option value="<?= htmlspecialchars($name) ?>" 
                         <?= $values['studio_name'] == $name ? 'selected' : '' ?>>
                         <?= htmlspecialchars($name) ?>
@@ -103,10 +103,10 @@
         <!-- Согласие с правилами -->
         <div class="form-group">
             <div class="checkbox-group">
-                <input type="checkbox" id="contract" name="contract" value="1" 
-                       <?= $values['contract'] ? 'checked' : '' ?>
-                       class="<?= !empty($errors['contract']) ? 'error' : '' ?>">
-                <label for="contract">📄 Ознакомлен с правилами записи и согласен</label>
+                <input type="checkbox" id="agreed" name="agreed" value="1" 
+                       <?= $values['agreed'] ? 'checked' : '' ?>
+                       class="<?= !empty($errors['agreed']) ? 'error' : '' ?>">
+                <label for="agreed">📄 Ознакомлен с правилами записи и согласен</label>
             </div>
         </div>
 
@@ -115,7 +115,7 @@
         </button>
     </form>
     
-    <!-- Ссылка на просмотр своих записей (только для авторизованных) -->
+    <!-- Ссылка на просмотр своих записей -->
     <?php if (!empty($_SESSION['login'])): ?>
     <div style="margin-top: 20px; text-align: center;">
         <a href="my_bookings.php" class="my-bookings-link">📋 Посмотреть мои записи</a>
