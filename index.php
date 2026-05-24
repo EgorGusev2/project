@@ -271,8 +271,6 @@ if (isset($_SESSION['login'])) {
 
         <button type="submit">🎵 Записаться</button>
     </form>
-
-    <a href="edit_booking.php?id=<?php echo $booking['id']; ?>" class="btn-small">✏️</a>
     
 <?php if (!empty($userBookings)): ?>
     <div class="my-bookings">
